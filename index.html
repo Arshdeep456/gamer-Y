@@ -1,0 +1,1347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Jab Tak Hain Jaan - Multi-Level Game</title>
+  <style>
+    
+    body {
+      margin: 0;
+      background: black;
+      text-align: center;
+      font-family: Arial, sans-serif;
+      color: white;
+    }
+
+
+    /* Main Menu Styles */
+    #main-menu {
+      position: relative;
+      width: 800px;
+      height: 600px;
+      margin: 0 auto;
+      background: url('https://i.pinimg.com/originals/49/73/5b/49735b38c27ca67787e201a8f4b0fd6d.jpg') no-repeat center center;
+      background-size: cover;
+    }
+    #character-info {
+      position: absolute;
+      top: 50px;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+    }
+    #character-info img {
+      width: 300px;
+      border-radius: 10px;
+      position: relative;
+    }
+    #character-info h1 {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      margin: 0;
+      font-size: 32px;
+      color: #ffcc00;
+    }
+    #start-button {
+      position: absolute;
+      bottom: 50px;
+      left: calc(50% - 50px);
+      padding: 10px 20px;
+      font-size: 18px;
+      cursor: pointer;
+      background: #444;
+      border: none;
+      color: #fff;
+      border-radius: 5px;
+    }
+    /* Game Screen Styles (shared by Level 1, Level 2 & Level 3) */
+    #game-screen {
+      display: none;
+      position: relative;
+      width: 800px;
+      height: 600px;
+      margin: 0 auto;
+    }
+    canvas {
+      background: #000;
+      display: block;
+      margin: 0 auto;
+      border: 2px solid #fff;
+    }
+    /* Win overlay */
+    #armor-container {
+      display: none;
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      z-index: 10;
+    }
+    #armor-container img {
+      width: 200px;
+      display: block;
+      margin: 0 auto;
+    }
+    #armor-text {
+      font-size: 24px;
+      color: white;
+      margin-top: 5px;
+    }
+    /* Next Level button overlay */
+    #next-level-button {
+      display: none;
+      position: absolute;
+      left: 50%;
+      top: 80%;
+      transform: translateX(-50%);
+      padding: 8px 16px;
+      font-size: 16px;
+      cursor: pointer;
+      background: #555;
+      border: none;
+      color: #fff;
+      border-radius: 5px;
+      z-index: 10;
+    }
+    /* Add this style for the video container */
+    #video-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: black;
+      z-index: 1000;
+    }
+    
+    #intro-video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    
+    #skip-button {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      padding: 10px 20px;
+      background: #444;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div id="video-container" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: black; z-index: 1000;">
+    <video id="intro-video" playsinline style="width: 100%; height: 100%; object-fit: contain;">
+      <source src= "https://assets.onecompiler.app/43bkgsf6j/43buvrq8q/video.mp4" type="video/mp4">
+      Your browser does not support the video tag.
+    </video>
+    <div id="play-overlay" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; background: rgba(0,0,0,0.7); padding: 20px; border-radius: 10px;">
+      <h2 style="color: white; margin-bottom: 20px;">Click to Start Game</h2>
+      <button id="play-button" style="padding: 15px 30px; font-size: 20px; background: #444; color: white; border: none; border-radius: 5px; cursor: pointer;">
+        Play with Sound
+      </button>
+    </div>
+    <button id="skip-button" style="position: absolute; bottom: 20px; right: 20px; padding: 10px 20px; background: #444; color: white; border: none; border-radius: 5px; cursor: pointer;">
+      Skip Intro
+    </button>
+  </div>
+  
+  
+  
+  <!-- Main Menu -->
+  <div id="main-menu">
+    <div id="character-info">
+      <img src="https://assets.onecompiler.app/43bkgsf6j/43bkxb7wp/4b3f8c9754be725a25900d312155b35f-removebg-preview.png" alt="Gudu">
+      <h1>Gudu</h1>
+    </div>
+    <button id="start-button">Start Game</button>
+  </div>
+
+  <!-- Game Screen -->
+  <div id="game-screen">
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+
+    <!-- Level 1: Armor overlay -->
+    <div id="armor-container">
+      <img id="armor-img" alt="Armor">
+      <div id="armor-text">IRON MAN</div>
+    </div>
+
+    <button id="next-level-button">Next Level</button>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+       // Video handling
+      const videoContainer = document.getElementById('video-container');
+      const introVideo = document.getElementById('intro-video');
+      const playButton = document.getElementById('play-button');
+      const playOverlay = document.getElementById('play-overlay');
+      const skipButton = document.getElementById('skip-button');
+      const mainMenu = document.getElementById('main-menu');
+      
+  // Hide main menu initially
+mainMenu.style.display = 'none'; 
+
+// Pause video initially
+  introVideo.pause();
+  
+   // Play button handler
+   playButton.addEventListener('click', function() {
+    // Remove the muted attribute and play
+    introVideo.muted = false;
+    introVideo.play().then(() => {
+      playOverlay.style.display = 'none';
+      console.log('Video playing with sound');
+    }).catch(error => {
+      console.error('Video playback failed:', error);
+      startGame();
+    });
+  });
+    
+
+// Add these after defining introVideo
+console.log("Video element found:", introVideo !== null);
+
+introVideo.addEventListener('loadstart', () => console.log('Video: loadstart'));
+introVideo.addEventListener('loadeddata', () => console.log('Video: loadeddata'));
+introVideo.addEventListener('canplay', () => console.log('Video: canplay'));
+introVideo.addEventListener('play', () => console.log('Video: playing'));
+introVideo.addEventListener('error', (e) => {
+  console.error('Video error:', introVideo.error);
+  startGame();
+});
+ // Function to start game
+  function startGame() {
+    videoContainer.style.display = 'none';
+    mainMenu.style.display = 'block';
+  }
+
+  // Skip button handler
+  skipButton.addEventListener('click', function() {
+    introVideo.pause();
+    startGame();
+  });
+
+  // When video ends naturally
+  introVideo.addEventListener('ended', function() {
+    startGame();
+  });
+      // Collision detection helper
+      function rectsIntersect(r1, r2) {
+        return !(
+          r1.x + r1.width <= r2.x ||
+          r1.x >= r2.x + r2.width ||
+          r1.y + r1.height <= r2.y ||
+          r1.y >= r2.y + r2.height
+        );
+      }
+
+       // HTML elements
+      const startButton = document.getElementById('start-button');
+      const gameScreen = document.getElementById('game-screen');
+      const canvas = document.getElementById('gameCanvas');
+      const ctx = canvas.getContext('2d');
+      const armorContainer = document.getElementById('armor-container');
+      const armorImgElement = document.getElementById('armor-img');
+      const nextLevelButton = document.getElementById('next-level-button');
+
+      
+
+       // ADD THE BACKGROUND MUSIC CODE RIGHT HERE:
+  // Add background music
+  const backgroundMusic = new Audio('https://assets.onecompiler.app/43bkgsf6j/43bpp7bpr/epic-music-fress-238226.mp3');
+  backgroundMusic.loop = true; // Make the music loop continuously
+
+  // Function to start background music
+  function startBackgroundMusic() {
+    backgroundMusic.play().catch(error => {
+      console.log("Audio playback failed:", error);
+    });
+  }
+
+  // Function to stop background music
+  function stopBackgroundMusic() {
+    backgroundMusic.pause();
+    backgroundMusic.currentTime = 0;
+  }
+
+  // Add music controls
+  let isMusicPlaying = false;
+  const toggleMusic = () => {
+    if (isMusicPlaying) {
+      stopBackgroundMusic();
+    } else {
+      startBackgroundMusic();
+    }
+    isMusicPlaying = !isMusicPlaying;
+  };
+
+  // Add a music toggle button to your HTML
+  const musicButton = document.createElement('button');
+  musicButton.innerHTML = '🎵 Toggle Music';
+  musicButton.style.position = 'absolute';
+  musicButton.style.top = '10px';
+  musicButton.style.right = '10px';
+  musicButton.style.padding = '5px 10px';
+  musicButton.style.backgroundColor = '#444';
+  musicButton.style.color = '#fff';
+  musicButton.style.border = 'none';
+  musicButton.style.borderRadius = '5px';
+  musicButton.style.cursor = 'pointer';
+  document.body.appendChild(musicButton);
+
+  // Add click event listener to music button
+  musicButton.addEventListener('click', toggleMusic);
+  
+  // Rest of your existing code...
+
+      // Global game variables
+      let currentLevel = 1; // Level 1: Maze; Level 2: Zombie Shooter; Level 3: Platformer
+      let levelComplete = false;
+      let lastTime = 0;
+      let gameOver = false;
+
+      // Level 2 and 3 variables
+      let zombies = [];
+      let playerBullets = [];
+      let zombieBullets = [];
+      let zombieKillCount = 0;
+      let zombieSpawnTimer = 0;
+      const zombieSpawnInterval = 2000; // 2 seconds
+
+      // Platformer Variables for Level 3
+      let gravity = 0.35; // Reduced from 0.5 for longer jumps
+      let isJumping = false;
+      let backgroundX = 0; // For scrolling background
+      let enemies = [];
+      let obstacles = [];
+      let bullets = [];
+      let gameWon = false;
+      let isBlinking = false;
+      let blinkTimer = 0;
+
+
+      // Level 3 specific objects
+      const level3World = {
+        width: 3000, // Total level width
+        platforms: [
+          // Ground platforms with smaller gaps between them (deadly holes)
+          { x: 0, y: 500, width: 750, height: 100 },
+          { x: 850, y: 500, width: 320, height: 100 }, // Gap of 100px (smaller hole)
+          { x: 1270, y: 500, width: 350, height: 100 }, // Gap of 100px (smaller hole)
+          { x: 1720, y: 500, width: 300, height: 100 }, // Gap of 100px (smaller hole)
+          { x: 2120, y: 500, width: 330, height: 100 }, // Gap of 100px (smaller hole)
+          { x: 2550, y: 500, width: 450, height: 100 }  // Gap of 100px (smaller hole)
+        ],
+        obstacles: [
+          { x: 350, y: 450, width: 50, height: 50 },
+          { x: 700, y: 450, width: 50, height: 50 },
+          { x: 950, y: 450, width: 50, height: 50 },
+          { x: 1100, y: 450, width: 50, height: 50 },
+          { x: 1350, y: 450, width: 50, height: 50 },
+          { x: 1500, y: 450, width: 50, height: 50 },
+          { x: 1750, y: 450, width: 50, height: 50 },
+          { x: 1900, y: 450, width: 50, height: 50 },
+          { x: 2100, y: 450, width: 50, height: 50 },
+          { x: 2200, y: 450, width: 50, height: 50 }
+        ],
+        enemies: [
+          { x: 500, y: 450, width: 40, height: 50, speed: 2, direction: 1, originalX: 500, range: 100, health: 20 },
+          { x: 1200, y: 450, width: 40, height: 50, speed: 2, direction: 1, originalX: 1200, range: 120, health: 20 },
+          { x: 1700, y: 450, width: 40, height: 50, speed: 3, direction: 1, originalX: 1700, range: 150, health: 20 },
+          { x: 2300, y: 450, width: 40, height: 50, speed: 3, direction: 1, originalX: 2300, range: 150, health: 20 }
+        ],
+        gate: { x: 2800, y: 380, width: 80, height: 120 }
+      };
+
+      // Images
+      const mazeBackground = new Image();
+      mazeBackground.src = 'https://assets.onecompiler.app/43bkgsf6j/43bkgsk9u/kkkkk.jpg'; // Level 1 background
+
+      const level2Background = new Image();
+      level2Background.src = 'https://assets.onecompiler.app/43bkgsf6j/43bkgsk9u/OIP.jpeg'; // Level 2 background
+
+      const level3Background = new Image();
+      level3Background.src = 'https://assets.onecompiler.app/43bkgsf6j/43bnppppd/Game_Background_190.png'; // New forest background
+
+      const guduImg = new Image();
+      guduImg.src = 'https://assets.onecompiler.app/43bkgsf6j/43bkgsk9u/picture%202.png';
+
+      const chestImg = new Image();
+      chestImg.src = 'https://assets.onecompiler.app/43bkgsf6j/43bkgsk9u/picture(1).jpg';
+
+      const armorImg = new Image();
+      armorImg.src = 'https://assets.onecompiler.app/43bkgsf6j/43bkgsk9u/picture(2).png';
+
+      const zombieImg = new Image();
+      zombieImg.src = "https://assets.onecompiler.app/43bkgsf6j/43bkgsk9u/Cartoon-zombie-vector-fotor-20250312201023%20(1).png";
+
+      const flapperImg = new Image();
+      flapperImg.src = 'https://assets.onecompiler.app/43bkgsf6j/43bkxb7wp/Cartoon-zombie-vector-fotor-20250312201023(2).png'; // Flapper character
+
+      const enemyImg = new Image();
+      enemyImg.src = 'https://assets.onecompiler.app/43bkgsf6j/43bnppppd/R.png'; 
+    // Reusing zombie image for enemies
+
+      const gateImg = new Image();
+      gateImg.src = "https://assets.onecompiler.app/43bkgsf6j/43bnppppd/OIP__2_-removebg-preview.png"; // Reusing chest image for gate
+
+      // Player object.
+      const player = {
+        width: 40,
+        height: 40,
+        speed: 5,
+        x: 40,
+        y: 40,
+        health: 100,
+        velocityY: 0,
+        armorHealth: 0, // For level 3
+        isFlapper: false, // Set to true in level 3
+        facing: 'right',
+        invincible: false // To prevent multiple hits in quick succession
+      };
+
+      // Level 1: Maze walls (collidable) - Enhanced Complex Puzzle
+const walls = [
+  // Border walls
+  { x: 0, y: 0, width: 800, height: 10 },      // Top border
+  { x: 0, y: 0, width: 10, height: 600 },      // Left border
+  { x: 0, y: 590, width: 800, height: 10 },    // Bottom border
+  { x: 790, y: 0, width: 10, height: 600 },    // Right border
+  
+  // Main maze structure - creating a more complex layout
+  // Left section
+  { x: 100, y: 10, width: 10, height: 150 },   // Upper left vertical wall
+  { x: 100, y: 200, width: 10, height: 250 },  // Lower left vertical wall
+  { x: 100, y: 200, width: 150, height: 10 },  // Horizontal connector from left wall
+  { x: 100, y: 450, width: 150, height: 10 },  // Lower horizontal connector
+  
+  // Middle section - creating a winding path
+  { x: 250, y: 100, width: 10, height: 110 },  // Upper middle vertical wall
+  { x: 250, y: 100, width: 150, height: 10 },  // Upper horizontal connector
+  { x: 250, y: 250, width: 10, height: 210 },  // Lower middle vertical wall
+  { x: 250, y: 250, width: 100, height: 10 },  // Middle horizontal connector
+  { x: 350, y: 250, width: 10, height: 200 },  // Right middle vertical wall
+  { x: 250, y: 450, width: 110, height: 10 },  // Lower horizontal connector
+  
+  // Upper right section - creating a mini-maze
+  { x: 400, y: 10, width: 10, height: 150 },   // Upper right vertical wall
+  { x: 400, y: 150, width: 150, height: 10 },  // Upper right horizontal wall
+  { x: 550, y: 10, width: 10, height: 150 },   // Far upper right vertical wall
+  { x: 450, y: 150, width: 10, height: 100 },  // Small vertical divider
+  { x: 500, y: 200, width: 10, height: 100 },  // Another small vertical divider
+  { x: 450, y: 250, width: 60, height: 10 },   // Small horizontal connector
+  
+  // Lower right section - creating a challenging path to chest
+  { x: 400, y: 300, width: 250, height: 10 },  // Main horizontal divider
+  { x: 400, y: 300, width: 10, height: 150 },  // Vertical wall from divider
+  { x: 400, y: 450, width: 250, height: 10 },  // Lower horizontal wall
+  { x: 650, y: 300, width: 10, height: 160 },  // Right vertical wall
+  { x: 500, y: 350, width: 10, height: 100 },  // Vertical obstacle near chest
+  { x: 550, y: 350, width: 10, height: 100 },  // Another vertical obstacle near chest
+  { x: 600, y: 350, width: 10, height: 100 },  // Third vertical obstacle near chest
+  
+  // Dead ends and traps
+  { x: 150, y: 50, width: 50, height: 10 },    // Dead end in upper left
+  { x: 200, y: 50, width: 10, height: 100 },   // Dead end vertical wall
+  { x: 300, y: 350, width: 50, height: 10 },   // Dead end in middle
+  { x: 700, y: 100, width: 10, height: 150 },  // Dead end in upper right
+  { x: 650, y: 100, width: 50, height: 10 },   // Dead end horizontal connector
+  
+  // Narrow passages
+  { x: 300, y: 500, width: 350, height: 10 },  // Lower narrow passage wall
+  { x: 300, y: 520, width: 350, height: 10 },  // Creating a narrow corridor to chest
+  
+  // Maze center - creating a puzzle box in the middle
+  { x: 300, y: 150, width: 50, height: 10 },   // Top of center box
+  { x: 300, y: 150, width: 10, height: 50 },   // Left of center box
+  { x: 350, y: 150, width: 10, height: 50 },   // Right of center box
+  { x: 300, y: 200, width: 60, height: 10 }    // Bottom of center box
+];
+
+// Move the chest to a more challenging location
+const chest = { x: 720, y: 520, width: 40, height: 40 };
+
+
+      // Track key presses (common)
+      const keys = {};
+      document.addEventListener('keydown', e => { 
+        keys[e.key] = true;
+
+        // Jump in Level 3 - only allow jumping when on ground
+        if ((e.key === 'ArrowUp' || e.key === ' ') && currentLevel === 3 && !isJumping) {
+          player.velocityY = -18; // Increased from -12 for higher jump
+          isJumping = true;
+          
+          // Small delay before allowing another jump
+          setTimeout(() => {
+            if (player.velocityY > 0) {
+              isJumping = true;
+            }
+          }, 100);
+        }
+
+        // Shoot in Level 3
+        if (e.key === 'f' && currentLevel === 3) {
+          shootBullet();
+        }
+      });
+      document.addEventListener('keyup', e => { 
+        keys[e.key] = false; 
+      });
+
+      // ----------------- Level 1: Maze Game -----------------
+      function updateLevel1() {
+        if (levelComplete) return;
+        const oldX = player.x, oldY = player.y;
+        if (keys['ArrowLeft'])  { player.x -= player.speed; }
+        if (keys['ArrowRight']) { player.x += player.speed; }
+        if (keys['ArrowUp'])    { player.y -= player.speed; }
+        if (keys['ArrowDown'])  { player.y += player.speed; }
+        if (player.x < 0) player.x = 0;
+        if (player.y < 0) player.y = 0;
+        if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
+        if (player.y + player.height > canvas.height) player.y = canvas.height - player.height;
+        for (let wall of walls) {
+          if (rectsIntersect(player, wall)) {
+            player.x = oldX;
+            player.y = oldY;
+            break;
+          }
+        }
+        if (rectsIntersect(player, chest)) {
+          levelComplete = true;
+          showArmorAndButton();
+        }
+      }
+
+      function drawLevel1() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(mazeBackground, 0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = 'black';
+        walls.forEach(wall => ctx.fillRect(wall.x, wall.y, wall.width, wall.height));
+        ctx.drawImage(chestImg, chest.x, chest.y, chest.width, chest.height);
+        ctx.drawImage(guduImg, player.x, player.y, player.width, player.height);
+        const name = 'Gudu';
+        ctx.font = '20px Georgia';
+        ctx.fillStyle = 'black';
+        ctx.textBaseline = 'bottom';
+        const textWidth = ctx.measureText(name).width;
+        ctx.fillText(name, player.x + (player.width - textWidth) / 2, player.y - 5);
+      }
+
+      function gameLoopLevel1() {
+        updateLevel1();
+        drawLevel1();
+        if (!levelComplete) {
+          requestAnimationFrame(gameLoopLevel1);
+        }
+      }
+
+      function showArmorAndButton() {
+        armorImgElement.src = armorImg.src;
+        armorContainer.style.display = 'block';
+        nextLevelButton.style.display = 'block';
+      }
+
+      // ----------------- Level 2: Zombie Shooter -----------------
+      function updateLevel2(deltaTime) {
+        if (levelComplete) return;
+        // Player movement (positioned on right side)
+        if (keys['ArrowLeft'])  { player.x -= player.speed; }
+        if (keys['ArrowRight']) { player.x += player.speed; }
+        if (keys['ArrowUp'])    { player.y -= player.speed; }
+        if (keys['ArrowDown'])  { player.y += player.speed; }
+        if (player.x < 0) player.x = 0;
+        if (player.y < 0) player.y = 0;
+        if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
+        if (player.y + player.height > canvas.height) player.y = canvas.height - player.height;
+
+        // Update player's bullets (move leftward)
+        for (let i = playerBullets.length - 1; i >= 0; i--) {
+          playerBullets[i].x -= playerBullets[i].speed * (deltaTime / 16);
+          if (playerBullets[i].x + playerBullets[i].width < 0) {
+            playerBullets.splice(i, 1);
+          }
+        }
+
+        // Spawn zombies from left side
+        zombieSpawnTimer += deltaTime;
+        if (zombieSpawnTimer > zombieSpawnInterval) {
+          zombieSpawnTimer = 0;
+          const zombie = {
+            width: 80,
+            height: 80,
+            speed: 1 + Math.random(), // random speed between 1 and 2
+            x: -80,
+            y: Math.random() * (canvas.height - 80),
+            shootTimer: 0
+          };
+          zombies.push(zombie);
+        }
+
+        // Update zombies: move rightward and shoot
+        for (let i = zombies.length - 1; i >= 0; i--) {
+          zombies[i].x += zombies[i].speed * (deltaTime / 16);
+          zombies[i].shootTimer += deltaTime;
+          if (zombies[i].shootTimer > 2000) {
+            zombies[i].shootTimer = 0;
+            const zBullet = {
+              x: zombies[i].x + zombies[i].width,
+              y: zombies[i].y + zombies[i].height / 2 - 5,
+              width: 10,
+              height: 10,
+              speed: 5
+            };
+            zombieBullets.push(zBullet);
+          }
+          // Check if zombie touches player (immediate elimination and restart)
+          if (rectsIntersect(zombies[i], player)) {
+            gameOver = true;
+            levelComplete = true;
+          }
+          if (zombies[i].x > canvas.width) {
+            zombies.splice(i, 1);
+          }
+        }
+
+        // Update zombie bullets: move rightward
+        for (let i = zombieBullets.length - 1; i >= 0; i--) {
+          zombieBullets[i].x += zombieBullets[i].speed * (deltaTime / 16);
+          if (zombieBullets[i].x > canvas.width) {
+            zombieBullets.splice(i, 1);
+          }
+        }
+
+        // Check collisions: player's bullets vs zombies
+        for (let i = playerBullets.length - 1; i >= 0; i--) {
+          for (let j = zombies.length - 1; j >= 0; j--) {
+            if (rectsIntersect(playerBullets[i], zombies[j])) {
+              playerBullets.splice(i, 1);
+              zombies.splice(j, 1);
+              zombieKillCount++;
+              break;
+            }
+          }
+        }
+
+        // Check collisions: zombie bullets vs player (lose 5 health)
+        for (let i = zombieBullets.length - 1; i >= 0; i--) {
+          if (rectsIntersect(zombieBullets[i], player)) {
+            zombieBullets.splice(i, 1);
+            player.health -= 5;
+            if (player.health <= 0) {
+              gameOver = true;
+              levelComplete = true;
+            }
+          }
+        }
+
+        // If 10 zombies killed, allow chest to appear and check collision with chest
+        if (zombieKillCount >= 10 && rectsIntersect(player, chest)) {
+          levelComplete = true;
+        }
+      }
+
+      function drawLevel2() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(level2Background, 0, 0, canvas.width, canvas.height);
+
+        // Draw player (using armor image)
+        ctx.drawImage(armorImg, player.x, player.y, player.width, player.height);
+
+        // Draw health bar above player
+        const healthBarWidth = player.width;
+        const healthBarHeight = 5;
+        const healthPercentage = player.health / 100;
+        ctx.fillStyle = 'red';
+        ctx.fillRect(player.x, player.y - 10, healthBarWidth, healthBarHeight);
+        ctx.fillStyle = 'green';
+        ctx.fillRect(player.x, player.y - 10, healthBarWidth * healthPercentage, healthBarHeight);
+
+        // Draw player's name above
+        const name = 'Gudu';
+        ctx.font = '20px Georgia';
+        ctx.fillStyle = 'black';
+        ctx.textBaseline = 'bottom';
+        const textWidth = ctx.measureText(name).width;
+        ctx.fillText(name, player.x + (player.width - textWidth) / 2, player.y - 15);
+
+        // Draw player's bullets
+        ctx.fillStyle = 'blue';
+        playerBullets.forEach(bullet => {
+          ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+        });
+
+        // Draw zombies
+        zombies.forEach(zombie => {
+          ctx.drawImage(zombieImg, zombie.x, zombie.y, zombie.width, zombie.height);
+        });
+
+        // Draw zombie bullets
+        ctx.fillStyle = 'purple';
+        zombieBullets.forEach(bullet => {
+          ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+        });
+
+        // If 10 zombies killed, draw chest
+        if (zombieKillCount >= 10) {
+          ctx.drawImage(chestImg, chest.x, chest.y, chest.width, chest.height);
+        }
+      }
+
+      function gameLoopLevel2(timestamp) {
+        let deltaTime = timestamp - lastTime;
+        lastTime = timestamp;
+        updateLevel2(deltaTime);
+        drawLevel2();
+        if (!levelComplete) {
+          requestAnimationFrame(gameLoopLevel2);
+        } else {
+          ctx.font = '30px Georgia';
+          ctx.fillStyle = 'black';
+          let msg;
+          if (gameOver) {
+            msg = 'Game Over! Restarting...';
+            const msgWidth = ctx.measureText(msg).width;
+            ctx.fillText(msg, (canvas.width - msgWidth) / 2, canvas.height / 2);
+            setTimeout(() => { location.reload(); }, 2000);
+          } else {
+            // Show winning message
+            msg = 'You Win Level 2! You\'ve unlocked Flapper for Level 3!';
+            const msgWidth = ctx.measureText(msg).width;
+            ctx.fillText(msg, (canvas.width - msgWidth) / 2, canvas.height / 2 - 100);
+
+            // Show Flapper image (indicating player won Flapper)
+            const flapperWinImg = new Image();
+            flapperWinImg.src = 'https://assets.onecompiler.app/43bkgsf6j/43bkxb7wp/Cartoon-zombie-vector-fotor-20250312201023(2).png';
+            if (flapperWinImg.complete) {
+              ctx.drawImage(flapperWinImg, canvas.width/2 - 100, canvas.height/2 - 80, 200, 200);
+            } else {
+              flapperWinImg.onload = function() {
+                ctx.drawImage(flapperWinImg, canvas.width/2 - 100, canvas.height/2 - 80, 200, 200);
+              };
+            }
+
+            nextLevelButton.style.display = 'block';
+          }
+        }
+      }
+
+      // ----------------- Level 3: Mario-style Platformer with Flapper -----------------
+      function shootBullet() {
+        if (currentLevel === 3) {
+          const direction = player.facing === 'right' ? 1 : -1;
+          const bulletX = player.facing === 'right' ? player.x + player.width : player.x;
+
+          bullets.push({
+            x: bulletX,
+            y: player.y + player.height / 2 - 5,
+            width: 10,
+            height: 10,
+            speed: 8 * direction,
+            direction: direction
+          });
+        }
+      }
+
+      function updateLevel3(deltaTime) {
+        if (levelComplete || gameOver) return;
+
+        const oldX = player.x; // Store previous position to handle collision properly
+        const oldY = player.y;
+
+        // Apply gravity - increased gravity for better ground contact
+        player.velocityY += gravity * 1.5;
+        player.y += player.velocityY;
+
+        // Update player direction
+        if (keys['ArrowLeft']) {
+          player.x -= player.speed;
+          player.facing = 'left';
+        }
+        if (keys['ArrowRight']) {
+          player.x += player.speed;
+          player.facing = 'right';
+        }
+
+        // Boundary check
+        if (player.x < 50) player.x = 50;
+
+        // Scroll the background when player moves past half the screen
+        if (player.x > canvas.width / 2 && backgroundX < level3World.width - canvas.width) {
+          backgroundX += player.speed;
+          player.x = canvas.width / 2;
+
+          // Move level elements when scrolling
+          level3World.platforms.forEach(platform => platform.x -= player.speed);
+          level3World.obstacles.forEach(obstacle => obstacle.x -= player.speed);
+          level3World.enemies.forEach(enemy => {
+            enemy.x -= player.speed;
+            enemy.originalX -= player.speed;
+          });
+          level3World.gate.x -= player.speed;
+        }
+
+        // Check platform collisions - improved collision detection
+        let onPlatform = false;
+        level3World.platforms.forEach(platform => {
+          if (
+            player.x + player.width > platform.x &&
+            player.x < platform.x + platform.width &&
+            player.y + player.height >= platform.y - 10 && // Increased tolerance to 10px
+            player.y + player.height <= platform.y + platform.height / 2 &&
+            player.velocityY >= 0
+          ) {
+            player.y = platform.y - player.height;
+            player.velocityY = 0;
+            isJumping = false;
+            onPlatform = true;
+          }
+        });
+
+        // Check if falling into a gap between platforms
+        if (!onPlatform && player.velocityY > 0) {
+          // Check if there's a platform below to land on
+          let hasPlatformBelow = false;
+          level3World.platforms.forEach(platform => {
+            if (
+              player.x + player.width > platform.x &&
+              player.x < platform.x + platform.width &&
+              player.y + player.height < platform.y &&
+              player.y + player.height + player.velocityY * 5 > platform.y
+            ) {
+              hasPlatformBelow = true;
+            }
+          });
+
+          // If player is about to fall into a gap with no platform below, prevent movement
+          if (!hasPlatformBelow && player.y + player.height > 550) {
+            // Revert to previous X position, but allow falling
+            player.x = oldX;
+          }
+        }
+
+        // If player falls off screen
+        if (player.y > canvas.height) {
+          // Falling into a hole is deadly - instant game over
+          player.health = 0;
+          gameOver = true;
+          
+          // Visual effect for falling
+          isBlinking = true;
+          blinkTimer = 0;
+        }
+
+        // Update bullets
+        for (let i = bullets.length - 1; i >= 0; i--) {
+          bullets[i].x += bullets[i].speed;
+
+          // Remove bullets that go off screen
+          if (bullets[i].x < 0 || bullets[i].x > canvas.width) {
+            bullets.splice(i, 1);
+            continue;
+          }
+
+          // Check bullet collision with enemies
+          for (let j = level3World.enemies.length - 1; j >= 0; j--) {
+            if (rectsIntersect(bullets[i], level3World.enemies[j])) {
+              // Damage enemy
+              level3World.enemies[j].health -= 10;
+              bullets.splice(i, 1);
+
+              // Remove enemy if health <= 0
+              if (level3World.enemies[j].health <= 0) {
+                level3World.enemies.splice(j, 1);
+              }
+              break;
+            }
+          }
+
+          // Check bullet collision with obstacles
+          for (let j = 0; j < level3World.obstacles.length; j++) {
+            if (rectsIntersect(bullets[i], level3World.obstacles[j])) {
+              bullets.splice(i, 1);
+              break;
+            }
+          }
+        }
+
+        // Update enemies
+        level3World.enemies.forEach(enemy => {
+          // Move enemy
+          enemy.x += enemy.speed * enemy.direction;
+
+          // Reverse direction at range limits
+          if (
+            enemy.x > enemy.originalX + enemy.range ||
+            enemy.x < enemy.originalX - enemy.range
+          ) {
+            enemy.direction *= -1;
+          }
+
+          // Check player collision with enemy
+          if (rectsIntersect(player, enemy) && !player.invincible) {
+            // Check if player is jumping on enemy from above
+            if (player.velocityY > 0 && player.y + player.height < enemy.y + enemy.height / 2) {
+              // Kill enemy when jumped on from above
+              level3World.enemies.splice(level3World.enemies.indexOf(enemy), 1);
+              player.velocityY = -10; // Bounce effect
+            } else {
+              // Front collision - damage player
+              if (player.armorHealth > 0) {
+                // Reduce armor
+                player.armorHealth -= 50;
+                if (player.armorHealth < 0) player.armorHealth = 0;
+              } else {
+                // Without armor, take more damage or die
+                player.health -= 40; // Reduced damage to make game more forgiving
+              }
+
+              // Activate blinking effect
+              isBlinking = true;
+              blinkTimer = 0;
+
+              // Push player back slightly (reduced to prevent excessive knockback)
+              if (player.facing === 'right') {
+                player.x -= 15;
+              } else {
+                player.x += 15;
+              }
+
+              // Add invincibility time to prevent multiple rapid hits
+              player.invincible = true;
+              setTimeout(() => {
+                player.invincible = false;
+              }, 1000);
+
+              // Check game over
+              if (player.health <= 0) {
+                gameOver = true;
+              }
+            }
+          }
+        });
+
+        // Check collision with obstacles
+        level3World.obstacles.forEach(obstacle => {
+          if (rectsIntersect(player, obstacle)) {
+            // Only take damage if jumping on obstacles (coming from above)
+            if (player.velocityY > 0 && player.y < obstacle.y) {
+              // Player is falling onto obstacle from above
+              if (player.armorHealth > 0) {
+                player.armorHealth -= 15;
+              } else {
+                player.health -= 15;
+              }
+
+              // Activate blinking effect
+              isBlinking = true;
+              blinkTimer = 0;
+              
+              // Bounce player slightly
+              player.velocityY = -5;
+              
+              // Check game over
+              if (player.health <= 0) {
+                gameOver = true;
+              }
+            } else {
+              // Side collision - just block movement
+              if (player.x + player.width / 2 < obstacle.x + obstacle.width / 2) {
+                player.x = obstacle.x - player.width;
+              } else {
+                player.x = obstacle.x + obstacle.width;
+              }
+            }
+          }
+        });
+
+        // Check collision with gate
+        if (rectsIntersect(player, level3World.gate)) {
+          levelComplete = true;
+          gameWon = true;
+        }
+
+        // Update blinking effect
+        if (isBlinking) {
+          blinkTimer += deltaTime;
+          if (blinkTimer > 200) {
+            isBlinking = false;
+          }
+        }
+      }
+
+      function drawLevel3() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Draw scrolling background
+        ctx.drawImage(level3Background, 0, 0, level3Background.width, level3Background.height, -backgroundX % canvas.width, 0, canvas.width, canvas.height);
+        ctx.drawImage(level3Background, 0, 0, level3Background.width, level3Background.height, canvas.width - (backgroundX % canvas.width), 0, canvas.width, canvas.height);
+
+        // Draw platforms (ground platforms only now)
+        level3World.platforms.forEach(platform => {
+          // Ground platforms
+          ctx.fillStyle = '#8B4513'; // Brown for ground platforms
+          ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+        });
+
+        // Load obstacle image
+        const obstacleImg = new Image();
+        obstacleImg.src = "https://assets.onecompiler.app/43bkgsf6j/43bnppppd/OIP__3_-removebg-preview.png";       
+        // Draw obstacles
+        level3World.obstacles.forEach(obstacle => {
+          ctx.drawImage(obstacleImg, obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+        });
+
+        // Draw bullets
+        ctx.fillStyle = '#FFFFFF'; // White bullets
+        bullets.forEach(bullet => {
+          ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+        });
+
+        // Draw enemies
+        level3World.enemies.forEach(enemy => {
+          ctx.drawImage(enemyImg, enemy.x, enemy.y, enemy.width, enemy.height);
+        });
+
+        // Draw gate with highlight effect
+        ctx.drawImage(gateImg, level3World.gate.x, level3World.gate.y, level3World.gate.width, level3World.gate.height);
+        
+        // Add highlight to the gate to make it more noticeable
+        const time = Date.now() % 2000;
+        const alpha = Math.sin(time / 2000 * Math.PI) * 0.3 + 0.4; // Pulsating effect
+        ctx.fillStyle = `rgba(255, 255, 0, ${alpha})`;
+        ctx.fillRect(level3World.gate.x, level3World.gate.y, level3World.gate.width, level3World.gate.height);
+
+        // Add "Click to Enter" text above gate
+        ctx.font = '16px Arial';
+        ctx.fillStyle = 'white';
+        ctx.textAlign = 'center';
+        ctx.fillText('Click to Enter', level3World.gate.x + level3World.gate.width/2, level3World.gate.y - 10);
+        
+        // Draw Flapper (player)
+        if (isBlinking) {
+          if (blinkTimer < 100) {
+            ctx.drawImage(flapperImg, player.x, player.y, player.width, player.height);
+          }
+        } else {
+          ctx.drawImage(flapperImg, player.x, player.y, player.width, player.height);
+        }
+
+        // Draw health bar
+        ctx.fillStyle = 'white';
+        ctx.font = '16px Arial';
+        ctx.fillText(`Health: ${player.health}`, 20, 30);
+        ctx.fillStyle = '#ff0000';
+        ctx.fillRect(100, 20, player.health * 1.5, 15);
+        ctx.strokeStyle = 'white';
+        ctx.strokeRect(100, 20, 150, 15);
+
+        // Draw armor bar if player has armor
+        if (player.armorHealth > 0) {
+          ctx.fillStyle = 'white';
+          ctx.fillText(`Armor: ${player.armorHealth}`, 20, 60);
+          ctx.fillStyle = '#00a2ff';
+          ctx.fillRect(100, 50, player.armorHealth * 3, 15);
+          ctx.strokeStyle = 'white';
+          ctx.strokeRect(100, 50, 150, 15);
+        }
+      }
+
+      // Add gate click handler
+      canvas.addEventListener('click', function gateClickHandler(e) {
+        if (currentLevel === 3 && !gameOver && !levelComplete) {
+          const rect = canvas.getBoundingClientRect();
+          const mouseX = e.clientX - rect.left;
+          const mouseY = e.clientY - rect.top;
+          
+          // Calculate gate's position on screen (accounting for scrolling)
+          const gateOnScreen = {
+            x: level3World.gate.x,
+            y: level3World.gate.y,
+            width: level3World.gate.width,
+            height: level3World.gate.height
+          };
+          
+          // Check if click is on the gate
+          if (
+            mouseX > gateOnScreen.x &&
+            mouseX < gateOnScreen.x + gateOnScreen.width &&
+            mouseY > gateOnScreen.y &&
+            mouseY < gateOnScreen.y + gateOnScreen.height
+          ) {
+            levelComplete = true;
+            gameWon = true;
+          }
+        }
+      });
+
+      function gameLoopLevel3(timestamp) {
+    let deltaTime = timestamp - lastTime;
+    lastTime = timestamp;
+
+    updateLevel3(deltaTime);
+    drawLevel3();
+
+    if (!levelComplete && !gameOver) {
+        requestAnimationFrame(gameLoopLevel3);
+    } else {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.font = '30px Arial';
+
+        if (gameOver) {
+            ctx.fillStyle = '#FF0000';
+            ctx.textAlign = 'center';
+            ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2);
+
+            // Restart button
+            ctx.fillStyle = '#555';
+            ctx.fillRect(canvas.width / 2 - 60, canvas.height / 2 + 30, 120, 40);
+
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = '20px Arial';
+            ctx.fillText('Restart', canvas.width / 2, canvas.height / 2 + 55);
+
+            canvas.addEventListener('click', function restart(e) {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                if (
+                    x > canvas.width / 2 - 60 &&
+                    x < canvas.width / 2 + 60 &&
+                    y > canvas.height / 2 + 30 &&
+                    y < canvas.height / 2 + 70
+                ) {
+                    canvas.removeEventListener('click', restart);
+                    startLevel3();
+                }
+            });
+        } else if (gameWon) {
+            // Victory screen
+            ctx.fillStyle = '#FFD700';
+            ctx.textAlign = 'center';
+            ctx.fillText('CONGRATULATIONS! YOU WIN!', canvas.width / 2, canvas.height / 2);
+
+            // Return to Menu button
+            ctx.fillStyle = '#555';
+            ctx.fillRect(canvas.width / 2 - 90, canvas.height / 2 + 30, 180, 40);
+
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = '20px Arial';
+            ctx.fillText('Return to Menu', canvas.width / 2, canvas.height / 2 + 55);
+
+            canvas.addEventListener('click', function returnToMenu(e) {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                if (
+                    x > canvas.width / 2 - 90 &&
+                    x < canvas.width / 2 + 90 &&
+                    y > canvas.height / 2 + 30 &&
+                    y < canvas.height / 2 + 70
+                ) {
+                    canvas.removeEventListener('click', returnToMenu);
+                    
+                    // Return to start page
+                    gameScreen.style.display = 'none';
+                    mainMenu.style.display = 'block';
+                    
+                    // Reset game state
+                    currentLevel = 1;
+                    levelComplete = false;
+                    gameOver = false;
+                    gameWon = false;
+                    
+                    // Stop background music
+                    if (isMusicPlaying) {
+                        stopBackgroundMusic();
+                        isMusicPlaying = false;
+                    }
+                }
+            });
+        }
+    }
+}
+
+
+
+      function startLevel3() {
+        currentLevel = 3;
+        levelComplete = false;
+        gameOver = false;
+        gameWon = false;
+
+        // Reset player position and properties
+        player.width = 80; // Maintain character size from level 2
+        player.height = 80; // Maintain character size from level 2
+        player.x = 50;
+        player.y = 420; // Positioned directly on the ground platform
+        player.health = 100;
+        player.armorHealth = 50; // Start with armor
+        player.velocityY = 0;
+        player.speed = 7; // Increased from 5 for faster horizontal movement
+        player.isFlapper = true;
+        player.facing = 'right';
+
+        // Reset level 3 state
+        backgroundX = 0;
+        bullets = [];
+        isJumping = false;
+        isBlinking = false;
+        blinkTimer = 0;
+
+        // Reset level elements positions with smaller gaps to create deadly holes
+        level3World.platforms.forEach((platform, index) => {
+          // Ground platforms with smaller gaps between them
+          if (index === 0) platform.x = 0;
+          if (index === 1) platform.x = 850; // Smaller gap (100px)
+          if (index === 2) platform.x = 1270; // Smaller gap (100px)
+          if (index === 3) platform.x = 1720; // Smaller gap (100px)
+          if (index === 4) platform.x = 2120; // Smaller gap (100px)
+          if (index === 5) platform.x = 2550; // Smaller gap (100px)
+        });
+
+        level3World.obstacles.forEach((obstacle, index) => {
+          if (index === 0) obstacle.x = 350;
+          if (index === 1) obstacle.x = 700;
+          if (index === 2) obstacle.x = 950;
+          if (index === 3) obstacle.x = 1100;
+          if (index === 4) obstacle.x = 1350;
+          if (index === 5) obstacle.x = 1500;
+          if (index === 6) obstacle.x = 1750;
+          if (index === 7) obstacle.x = 1900;
+          if (index === 8) obstacle.x = 2100;
+          if (index === 9) obstacle.x = 2200;
+        });
+
+        level3World.enemies.forEach((enemy, index) => {
+          if (index === 0) { enemy.x = 500; enemy.originalX = 500; enemy.health = 20; }
+          if (index === 1) { enemy.x = 1200; enemy.originalX = 1200; enemy.health = 20; }
+          if (index === 2) { enemy.x = 1700; enemy.originalX = 1700; enemy.health = 20; }
+          if (index === 3) { enemy.x = 2300; enemy.originalX = 2300; enemy.health = 20; }
+        });
+
+        level3World.gate.x = 2800;
+        level3World.gate.y = 380;
+        level3World.gate.width = 80;
+        level3World.gate.height = 120;
+
+        lastTime = performance.now();
+        requestAnimationFrame(gameLoopLevel3);
+      }
+
+      // ----------------- Start and Transition -----------------
+      startButton.addEventListener('click', function() {
+        mainMenu.style.display = 'none';
+        gameScreen.style.display = 'block';
+        currentLevel = 1;
+        levelComplete = false;
+        zombieKillCount = 0;
+        gameOver = false;
+        player.width = 60;
+        player.height = 60;
+        player.x = 40;
+        player.y = 40;
+        player.health = 100;
+        playerBullets = [];
+        zombies = [];
+        zombieBullets = [];
+
+         // Play music with user interaction (this should work now)
+  backgroundMusic.play().catch(error => {
+    console.log("Audio playback failed:", error);
+  });
+  isMusicPlaying = true;
+        if (
+          mazeBackground.complete &&
+          guduImg.complete &&
+          chestImg.complete &&
+          armorImg.complete
+        ) {
+          requestAnimationFrame(gameLoopLevel1);
+        }
+      });
+
+      nextLevelButton.addEventListener('click', function() {
+        armorContainer.style.display = 'none';
+        nextLevelButton.style.display = 'none';
+
+        if (currentLevel === 1) {
+          currentLevel = 2;
+          levelComplete = false;
+          zombieKillCount = 0;
+          zombies = [];
+          playerBullets = [];
+          zombieBullets = [];
+          // For Level 2, update player's size to 80×80
+          player.width = 80;
+          player.height = 80;
+          // Position player on right side for Level 2
+          player.x = canvas.width - player.width - 60;
+          player.y = (canvas.height - player.height) / 2;
+          player.health = 100;
+          lastTime = performance.now();
+          requestAnimationFrame(gameLoopLevel2);
+        } else if (currentLevel === 2) {
+          // Start Level 3
+          startLevel3();
+        }
+      });
+
+      // Level 2 shooting with spacebar
+      document.addEventListener('keydown', function(e) {
+        if (currentLevel === 2 && e.key === ' ') {
+          const bullet = {
+            x: player.x,
+            y: player.y + player.height / 2 - 5,
+            width: 10,
+            height: 10,
+            speed: 7
+          };
+          playerBullets.push(bullet);
+          if (gameOver) {
+  // Stop music on game over
+  if (isMusicPlaying) {
+    stopBackgroundMusic();
+  }
+  
+  ctx.fillStyle = '#FF0000';
+  ctx.textAlign = 'center';
+  ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2);
+  
+  // Rest of your game over code...
+} else if (gameWon) {
+  // Stop music on victory
+  if (isMusicPlaying) {
+    stopBackgroundMusic();
+  }
+  
+  ctx.fillStyle = '#FFD700';
+  ctx.textAlign = 'center';
+  ctx.fillText('GAME OVER , YOU ESCAPED !', canvas.width / 2, canvas.height / 2);
+  
+  // Rest of your victory code...
+}
+
+        }
+      });
+    });
+  </script>
+</body>
+</html>
+
